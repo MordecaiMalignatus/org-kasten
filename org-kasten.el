@@ -68,7 +68,9 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 	 (properties (org-kasten--parse-properties buffer-text)))
     (setq-local org-kasten-id (cdr (assoc "ID" properties)))
     (setq-local org-kasten-links (split-string (cdr (assoc "LINKS" properties))))
-    (setq-local org-kasten-references (split-string (cdr (assoc "REFERENCES" properties))))))
+    ;; REFERENCES is nil in REFERENCES, since it is a key only present in notes.
+    (unless (eq 'nil (cdr (assoc "REFERENCES" properties)))
+      (setq-local org-kasten-references (split-string (cdr (assoc "REFERENCES" properties)))))))
 
 (defun org-kasten--write-properties ()
   "Write the buffer-local variables to the properties header."
