@@ -229,15 +229,13 @@ HEADLINE, and REFERENCE-BODY are self explanatory, LINKS are the notes that are 
     (setq-local org-kasten-links (-remove-item target-index org-kasten-links))
     (org-kasten--write-properties)))
 
-;; TODO: Navigating from Reference to Note does not work. (Error stringp nil
-;; Meaning this does navigate to ".." for references, landing nowhere.
 (defun org-kasten-navigate-links ()
   "Navigate to one of the links from the current card.
 Uses `completing-read', use with ivy for best results."
   (interactive)
   (org-kasten--read-properties)
   (let ((files (mapcar 'org-kasten--find-file-for-index org-kasten-links)))
-    (find-file (completing-read "Links:" files))))
+    (find-file (concat org-kasten-home (completing-read "Links:" files)))))
 
 (defun org-kasten-navigate-references ()
   "Navigate to the bibliographical references of this card."
