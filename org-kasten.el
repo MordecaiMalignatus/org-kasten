@@ -94,12 +94,12 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 	(links (if (eq org-kasten-links '())
 		   "nil"
 		 (string-join org-kasten-links " ")))
-	(references (if (eq org-kasten-references '())
-			"nil"
-		      (string-join org-kasten-references " "))))
+	(references  (if (org-kasten--current-file-reference-p)
+			    ""
+			  (concat "#+REFERENCES: " (string-join org-kasten-references " ") "\n"))))
     (concat "#+ID: " id "\n"
 	    "#+LINKS: " links "\n"
-	    "#+REFERENCES: " references "\n")))
+	    references)))
 
 ;; TODO: This needs to be expanded to take a path as well, so I can use it for references.
 (defun org-kasten--find-file-for-index (index)
@@ -223,7 +223,6 @@ HEADLINE, and REFERENCE-BODY are self explanatory, LINKS are the notes that are 
 
 (defun org-kasten--add-link-to-file (file target-index)
   "Add a link to TARGET-INDEX in FILE."
-  ;; Open/Visit target file, parse properties, push target-index, write properties, go back.
   (save-excursion
     (find-file file)
     (org-kasten--read-properties)
