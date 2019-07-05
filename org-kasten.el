@@ -188,6 +188,11 @@ The fragment is the part that goes after the index: `2-this-is-the-fragment.org'
 	 (no-spaces (s-replace-regexp "[[:space:]]" "-" trimmed)))
     no-spaces))
 
+(defun org-kasten--note-to-full-path (filename)
+  "Convenience function for turning FILENAME into a fully-qualified path.
+This is especially useful for fixing up `completing-read' filenames."
+  (concat org-kasten-home filename))
+
 (defun org-kasten--generate-new-note (headline links references note-body)
   "Generate a new note.
 Uses the HEADLINE, LINKS, REFERENCES and the NOTE-BODY as default values for the template."
@@ -281,7 +286,7 @@ The LINK-INDEX is a shorthand for the note to create a link to."
   (let* ((files (org-kasten--notes-in-kasten))
 	 (candidates (-filter (lambda (file) (not (string= file (buffer-file-name)))) files))
 	 (current-file-index (org-kasten--file-to-index (buffer-file-name)))
-	 (target-file (completing-read "File to link to: " candidates)))
+	 (target-file (org-kasten--note-to-full-path (completing-read "File to link to: " candidates))))
     (save-current-buffer
       (org-kasten--add-link-to-file target-file org-kasten-id)
       (org-kasten--add-link-to-file (buffer-file-name) (org-kasten--file-to-index target-file)))))
