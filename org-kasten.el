@@ -48,6 +48,10 @@ FILEPATH: File in question."
    (file-truename org-kasten-home)
    (file-truename filepath)))
 
+(defun org-kasten--current-file-reference-p ()
+  "Is the current buffer a reference or not?"
+  (not (eq 'nil (s-index-of \R org-kasten-id))))
+
 (defun org-kasten--parse-properties (string)
   "Get list of all regexp match in a STRING.
 All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
