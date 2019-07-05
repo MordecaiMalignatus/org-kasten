@@ -176,7 +176,7 @@ tin, LINKS are connections to other notes that you already know
 are relevant, and BODY is for when you're trying to transplant a
 region, and need somewhere for the text to be."
   (let* ((formatted-links (if (eq '() links) "nil" (string-join links " ")))
-	 (strings (list (concat "#+ID: " reference-id)
+	 (strings (list (concat "#+ID: R" reference-id)
 			(concat "#+LINKS: " formatted-links)
 			"#+STARTUP: showall\n"
 			(concat "* " headline "\n")
