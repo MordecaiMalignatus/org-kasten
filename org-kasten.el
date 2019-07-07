@@ -50,7 +50,7 @@ FILEPATH: File in question."
 
 (defun org-kasten--current-file-reference-p ()
   "Is the current buffer a reference or not?"
-  (not (eq 'nil (s-index-of \R org-kasten-id))))
+  (not (eq 'nil (s-index-of "R" org-kasten-id))))
 
 (defun org-kasten--parse-properties (string)
   "Get list of all regexp match in a STRING.
@@ -121,10 +121,10 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 
 (defun org-kasten--file-to-index (filepath)
   "Take a full FILEPATH, and return the index of the file, if it is in the kasten."
-  (substring
-   filepath
-   0
-   (s-index-of "-" filepath)))
+  (let ((maybe-dropped (if (s-starts-with? org-kasten-home filepath)
+			   (substring filepath (length org-kasten-home) (length filepath))
+			 filepath)))
+    (substring maybe-dropped 0 (s-index-of "-" maybe-dropped))))
 
 (defun org-kasten--reference-to-index (filepath)
   "Take the FILEPATH to a reference, and extract its index from it."
