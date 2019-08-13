@@ -34,10 +34,10 @@ Located in `org-kasten-home'/References."
             (define-key map (kbd "C-# c r") 'org-kasten-create-reference)
 	    ;; (define-key map (kbd "C-# r r") 'org-kasten-remove-reference)
 	    (define-key map (kbd "C-# c c") 'org-kasten-create-child-note)
-	    (define-key map (kbd "C-# n") 'org-kasten-navigate-links)
-	    ;; (define-key map (kbd "C-# r") 'org-kasten-navigate-references)
+	    (define-key map (kbd "C-# l") 'org-kasten-navigate-links)
+	    (define-key map (kbd "C-# r") 'org-kasten-navigate-references)
 	    (define-key map (kbd "C-# c l") 'org-kasten-add-link)
-	    (define-key map (kbd "C-# r l") 'org-kasten-remove-link)
+	    (define-key map (kbd "C-# d l") 'org-kasten-remove-link)
 	    map))
 
 (defun org-kasten--file-in-kasten-p (filepath)
@@ -101,23 +101,29 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 	    "#+LINKS: " links "\n"
 	    references)))
 
-;; TODO: This needs to be expanded to take a path as well, so I can use it for references.
 (defun org-kasten--find-file-for-index (index)
   "Convert a link INDEX as number or string to a full filepath."
-  (if (not (string= nil org-kasten-home))
-      (let* ((notes-in-kasten (org-kasten--notes-in-kasten))
-	     (string-index (if (numberp index)
-			       (number-to-string index)
-			     index))
-	     (files-starting-with-index (-filter (lambda (file) (s-starts-with-p (concat string-index "-") file))
-						 notes-in-kasten)))
-	(cond
-	 ((> (length files-starting-with-index) 1)
-	  (error (concat "Org-Kasten inconsistent, multiple files with index " string-index)))
-	 ((= (length files-starting-with-index) 0)
-	  (error (concat "Org-Kasten inconsistent, does not contain a note with index " string-index)))
-	 (t
-	  (car files-starting-with-index))))))
+  (if (org-kasten--current-file-reference-p)
+      (org-kasten--find-references-for-index index)
+    (org-kasten--find-notes-for-index index)))
+
+(defun org-kasten--find-reference-for-index (index)
+  "Find references that have INDEX as prefix.
+
+INDEX must be a string of form \"R10\"."
+  (-filter
+   (lambda (file)
+     (s-starts-with-p
+      (concat index "-")
+      file))
+   (org-kasten--references-in-kasten)))
+
+(defun org-kasten--find-notes-for-index (index)
+  "Find notes that have INDEX as prefix.
+Accepts either string or number `index'"
+  (let ((string-index (if (numberp index) (number-to-string index) index)))
+    (-filter (lambda (file) (s-starts-with-p (concat string-index "-") file))
+	     (org-kasten--notes-in-kasten))))
 
 (defun org-kasten--file-to-index (filepath)
   "Take a full FILEPATH, and return the index of the file, if it is in the kasten."
@@ -242,15 +248,19 @@ HEADLINE, and REFERENCE-BODY are self explanatory, LINKS are the notes that are 
 Uses `completing-read', use with ivy for best results."
   (interactive)
   (org-kasten--read-properties)
-  (let ((files (mapcar 'org-kasten--find-file-for-index org-kasten-links)))
-    (find-file (concat org-kasten-home (completing-read "Links:" files)))))
+  (let* ((files (mapcar 'org-kasten--find-file-for-index org-kasten-links))
+	 (candidate (completing-read "Links: " files)))
+    (find-file (concat org-kasten-home candidate))))
 
 (defun org-kasten-navigate-references ()
   "Navigate to the bibliographical references of this card."
   (interactive)
   (org-kasten--read-properties)
-  (let ((files (mapcar 'org-kasten--find-file-for-index org-kasten-links)))
-    (find-file (completing-read "References:" files))))
+  (if (org-kasten--current-file-reference-p)
+      (message "Already in a reference, no references to navigate.")
+    (let* ((files (mapcar 'org-kasten--find-reference-for-index org-kasten-references))
+	   (candidate (completing-read "References: " files)))
+      (find-file (concat (org-kasten--reference-dir) candidate)))))
 
 (defun org-kasten-create-note (read-title)
   "Create a new, enumerated note in the Kasten.
