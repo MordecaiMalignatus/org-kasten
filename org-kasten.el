@@ -20,11 +20,6 @@ Located in `org-kasten-home'/References."
       nil
     (concat org-kasten-home "References/")))
 
-;; TODO: I need to merge references and links if I'm going to distinguish the
-;; two in form of links regardless. Then one header field would fall away and it
-;; would look more unifom, not to mention allow me to largely merge reference
-;; and links navigation.
-
 (define-minor-mode org-kasten-mode
   "A minor mode providing the features of a Zettelkasten. Requires org."
   :lighter " org-k"
@@ -103,7 +98,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 
 (defun org-kasten--find-file-for-index (index)
   "Convert a link INDEX as number or string to a full filepath."
-  (if (org-kasten--current-file-reference-p)
+  (if (s-starts-with-p "R" index)
       (org-kasten--find-references-for-index index)
     (org-kasten--find-notes-for-index index)))
 
