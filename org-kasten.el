@@ -292,7 +292,7 @@ The LINK-INDEX is a shorthand for the note to create a link to."
   (when (not (org-kasten--file-in-kasten-p (buffer-file-name)))
     (error "Current buffer is not part of the kasten"))
   (let* ((files (org-kasten--notes-in-kasten))
-	 (candidates (-filter (lambda (file) (not (string= file (buffer-file-name)))) files))
+	 (candidates (-filter (lambda (file) (not (string= file (buffer-name)))) files))
 	 (current-file-index (org-kasten--file-to-index (buffer-file-name)))
 	 (target-file (org-kasten--note-to-full-path (completing-read "File to link to: " candidates))))
     (save-current-buffer
