@@ -59,7 +59,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (let* ((old-position (point))
 	 (removed-header (let* ((buffer (buffer-substring-no-properties (point-min) (point-max)))
 				(lines (split-string buffer "\n"))
-				(header-less (-drop 3 lines)))
+				(header-less (-drop 2 lines)))
 			   (string-join header-less "\n")))
 	 (new-body (concat (org-kasten--properties-to-string) removed-header)))
     (erase-buffer)
@@ -87,54 +87,44 @@ Accepts either string or number `index'"
   (let ((maybe-dropped (if (s-starts-with? org-kasten-home filepath)
 			   (substring filepath (length org-kasten-home) (length filepath))
 			 filepath)))
-    (substring maybe-dropped 0 (s-index-of "-" maybe-dropped))))
+    ;;  TODO: Temporary double-check while migration to dropping titles is in progress.
+    (if (s-contains-p "-" maybe-dropped)
+	(substring maybe-dropped 0 (s-index-of "-" maybe-dropped))
+      (substring maybe-dropped 0 (s-index-of "." maybe-dropped)))))
 
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
   (-filter
    (lambda (file)
      (s-matches?
-      "^[[:digit:]]+-[[:alnum:]-]+.org$"
+      "^[[:digit:]]+[[:alnum:]-]?+.org$"
       file))
-   (directory-files
-    org-kasten-home)))
+   (directory-files org-kasten-home)))
 
-(defun org-kasten--mk-default-note-content (note-id headline links body)
+(defun org-kasten--mk-default-note-content (note-id links body)
   "Take the individual pieces of a new note and stitch together the body.
 NOTE-ID: the number that will identitify the new note.
-HEADLINE: The headline, later also the file name fragment.
 LINKS: A list or string of indices that define the links.
-BODY: The body of the note, the part under the headlines."
+BODY: The body of the note."
   (let* ((formatted-links      (if (eq '() links) "nil" (string-join links " ")))
 	(strings    (list (concat "#+ID: " note-id)
 			  (concat "#+LINKS: " formatted-links)
 			  "#+STARTUP: showall\n"
-			  (concat "* " headline "\n")
 			  body)))
     (string-join strings "\n")))
-
-(defun org-kasten--headline-to-filename-fragment (headline)
-  "Turn a typed HEADLINE to a filename fragment.
-The fragment is the part that goes after the index: `2-this-is-the-fragment.org'"
-  (let* ((downcased (s-downcase headline))
-	 (no-punctuation (s-replace-regexp "[[:punct:]]" "" downcased))
-	 (trimmed (s-trim no-punctuation))
-	 (no-spaces (s-replace-regexp "[[:space:]]" "-" trimmed)))
-    no-spaces))
 
 (defun org-kasten--note-to-full-path (filename)
   "Convenience function for turning FILENAME into a fully-qualified path.
 This is especially useful for fixing up `completing-read' filenames."
   (concat org-kasten-home filename))
 
-(defun org-kasten--generate-new-note (headline links note-body)
+(defun org-kasten--generate-new-note (links note-body)
   "Generate a new note.
-Uses the HEADLINE, LINKS and the NOTE-BODY as default values for the template."
+Uses the LINKS and the NOTE-BODY as default values for the template."
   (let* ((current-highest-index (-max (mapcar 'string-to-number  (mapcar 'org-kasten--file-to-index (org-kasten--notes-in-kasten)))))
 	 (note-id              (number-to-string (+ 1 current-highest-index)))
-	 (file-content         (org-kasten--mk-default-note-content note-id headline links note-body))
-	 (stringified-headline (org-kasten--headline-to-filename-fragment headline)))
-    (find-file (concat org-kasten-home note-id "-" stringified-headline  ".org"))
+	 (file-content         (org-kasten--mk-default-note-content note-id links note-body)))
+    (find-file (concat org-kasten-home note-id ".org"))
     (insert file-content)
     (org-kasten--read-properties)
     note-id))
@@ -164,19 +154,18 @@ Uses `completing-read', use with ivy for best results."
 	 (candidate (completing-read "Links: " files)))
     (find-file (concat org-kasten-home candidate))))
 
-(defun org-kasten-create-note (read-title)
-  "Create a new, enumerated note in the Kasten.
-The READ-TITLE is going into the file fragment and the headline of the new note."
-  (interactive "MTitle: ")
+(defun org-kasten-create-note ()
+  "Create a new, enumerated note in the Kasten."
+  (interactive)
   (org-kasten--read-properties)
-  (org-kasten--generate-new-note read-title '() '() ""))
+  (org-kasten--generate-new-note '() ""))
 
-(defun org-kasten-create-child-note (title)
-  "Create a new card with TITLE that is linked to the current note."
-  (interactive "MTitle: ")
+(defun org-kasten-create-child-note ()
+  "Create a new card that is linked to the current note."
+  (interactive)
   (org-kasten--read-properties)
   (let ((current-file (buffer-file-name))
-	(new-id (org-kasten--generate-new-note title (list org-kasten-id) '() ""))
+	(new-id (org-kasten--generate-new-note (list org-kasten-id) ""))
 	(new-buffer (buffer-name)))
     (org-kasten--add-link-to-file current-file new-id)
     (switch-to-buffer new-buffer)))
