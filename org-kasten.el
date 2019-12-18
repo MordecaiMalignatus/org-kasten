@@ -13,24 +13,14 @@
   "Your home for the kasten.
 If nil, org-kasten won't do anything.")
 
-(defun org-kasten--reference-dir ()
-  "Home to your references and your otherwise notes.
-Located in `org-kasten-home'/References."
-  (if (eq nil org-kasten-home)
-      nil
-    (concat org-kasten-home "References/")))
-
 (define-minor-mode org-kasten-mode
   "A minor mode providing the features of a Zettelkasten. Requires org."
   :lighter " org-k"
   :keymap (let ((map (make-sparse-keymap)))
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
 	    (define-key map (kbd "C-# c n") 'org-kasten-create-note)
-            (define-key map (kbd "C-# c r") 'org-kasten-create-reference)
-	    ;; (define-key map (kbd "C-# r r") 'org-kasten-remove-reference)
 	    (define-key map (kbd "C-# c c") 'org-kasten-create-child-note)
 	    (define-key map (kbd "C-# l") 'org-kasten-navigate-links)
-	    (define-key map (kbd "C-# r") 'org-kasten-navigate-references)
 	    (define-key map (kbd "C-# c l") 'org-kasten-add-link)
 	    (define-key map (kbd "C-# d l") 'org-kasten-remove-link)
 	    map))
@@ -42,10 +32,6 @@ FILEPATH: File in question."
   (s-starts-with-p
    (file-truename org-kasten-home)
    (file-truename filepath)))
-
-(defun org-kasten--current-file-reference-p ()
-  "Is the current buffer a reference or not?"
-  (not (eq 'nil (s-index-of "R" org-kasten-id))))
 
 (defun org-kasten--parse-properties (string)
   "Get list of all regexp match in a STRING.
@@ -66,10 +52,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (let* ((buffer-text (buffer-substring-no-properties (point-min) (point-max)))
 	 (properties (org-kasten--parse-properties buffer-text)))
     (setq-local org-kasten-id (cdr (assoc "ID" properties)))
-    (setq-local org-kasten-links (split-string (cdr (assoc "LINKS" properties))))
-    ;; REFERENCES is nil in REFERENCES, since it is a key only present in notes.
-    (unless (eq 'nil (cdr (assoc "REFERENCES" properties)))
-      (setq-local org-kasten-references (split-string (cdr (assoc "REFERENCES" properties)))))))
+    (setq-local org-kasten-links (split-string (cdr (assoc "LINKS" properties))))))
 
 (defun org-kasten--write-properties ()
   "Write the buffer-local variables to the properties header."
@@ -88,30 +71,9 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (let ((id org-kasten-id)		; Must be present
 	(links (if (eq org-kasten-links '())
 		   "nil"
-		 (string-join org-kasten-links " ")))
-	(references  (if (org-kasten--current-file-reference-p)
-			    ""
-			  (concat "#+REFERENCES: " (string-join org-kasten-references " ") "\n"))))
+		 (string-join org-kasten-links " "))))
     (concat "#+ID: " id "\n"
-	    "#+LINKS: " links "\n"
-	    references)))
-
-(defun org-kasten--find-file-for-index (index)
-  "Convert a link INDEX as number or string to a full filepath."
-  (if (s-starts-with-p "R" index)
-      (org-kasten--find-references-for-index index)
-    (org-kasten--find-notes-for-index index)))
-
-(defun org-kasten--find-reference-for-index (index)
-  "Find references that have INDEX as prefix.
-
-INDEX must be a string of form \"R10\"."
-  (-filter
-   (lambda (file)
-     (s-starts-with-p
-      (concat index "-")
-      file))
-   (org-kasten--references-in-kasten)))
+	    "#+LINKS: " links "\n")))
 
 (defun org-kasten--find-notes-for-index (index)
   "Find notes that have INDEX as prefix.
@@ -127,11 +89,6 @@ Accepts either string or number `index'"
 			 filepath)))
     (substring maybe-dropped 0 (s-index-of "-" maybe-dropped))))
 
-(defun org-kasten--reference-to-index (filepath)
-  "Take the FILEPATH to a reference, and extract its index from it."
-  ;; Skip one for the "R" in the beginning of the filename.
-  (substring filepath 1 (s-index-of "-" filepath)))
-
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
   (-filter
@@ -142,46 +99,18 @@ Accepts either string or number `index'"
    (directory-files
     org-kasten-home)))
 
-(defun org-kasten--references-in-kasten ()
-  "Return a list of all references in the kasten."
-  (-filter
-   (lambda (file)
-     (s-matches?
-      "^R[[:digit:]]+-[[:alnum:]-]+.org$"
-      file))
-   (directory-files
-    (org-kasten--reference-dir))))
-
-(defun org-kasten--mk-default-note-content (note-id headline links references body)
+(defun org-kasten--mk-default-note-content (note-id headline links body)
   "Take the individual pieces of a new note and stitch together the body.
 NOTE-ID: the number that will identitify the new note.
 HEADLINE: The headline, later also the file name fragment.
 LINKS: A list or string of indices that define the links.
-REFERENCES: A list or string of indices that define the references.
 BODY: The body of the note, the part under the headlines."
   (let* ((formatted-links      (if (eq '() links) "nil" (string-join links " ")))
-	(formatted-references (if (eq '() references) "nil" (string-join references " ")))
 	(strings    (list (concat "#+ID: " note-id)
-		       (concat "#+LINKS: " formatted-links)
-		       (concat "#+REFERENCES: " formatted-references)
-		       "#+STARTUP: showall\n"
-		       (concat "* " headline "\n")
-		       body)))
-    (string-join strings "\n")))
-
-(defun org-kasten--mk-default-reference-content (reference-id headline links body)
-  "Take individual pieces and make a new reference.
-The REFERENCE-ID usually is auto-generated, but you can manually
-enumerate a reference.  HEADLINE is used for what it says on the
-tin, LINKS are connections to other notes that you already know
-are relevant, and BODY is for when you're trying to transplant a
-region, and need somewhere for the text to be."
-  (let* ((formatted-links (if (eq '() links) "nil" (string-join links " ")))
-	 (strings (list (concat "#+ID: R" reference-id)
-			(concat "#+LINKS: " formatted-links)
-			"#+STARTUP: showall\n"
-			(concat "* " headline "\n")
-			body)))
+			  (concat "#+LINKS: " formatted-links)
+			  "#+STARTUP: showall\n"
+			  (concat "* " headline "\n")
+			  body)))
     (string-join strings "\n")))
 
 (defun org-kasten--headline-to-filename-fragment (headline)
@@ -198,29 +127,17 @@ The fragment is the part that goes after the index: `2-this-is-the-fragment.org'
 This is especially useful for fixing up `completing-read' filenames."
   (concat org-kasten-home filename))
 
-(defun org-kasten--generate-new-note (headline links references note-body)
+(defun org-kasten--generate-new-note (headline links note-body)
   "Generate a new note.
-Uses the HEADLINE, LINKS, REFERENCES and the NOTE-BODY as default values for the template."
+Uses the HEADLINE, LINKS and the NOTE-BODY as default values for the template."
   (let* ((current-highest-index (-max (mapcar 'string-to-number  (mapcar 'org-kasten--file-to-index (org-kasten--notes-in-kasten)))))
 	 (note-id              (number-to-string (+ 1 current-highest-index)))
-	 (file-content         (org-kasten--mk-default-note-content note-id headline links references note-body))
+	 (file-content         (org-kasten--mk-default-note-content note-id headline links note-body))
 	 (stringified-headline (org-kasten--headline-to-filename-fragment headline)))
     (find-file (concat org-kasten-home note-id "-" stringified-headline  ".org"))
     (insert file-content)
     (org-kasten--read-properties)
     note-id))
-
-(defun org-kasten--generate-new-reference (headline links reference-body)
-  "Generate a new reference out of the given parts and sort it into the kasten.
-HEADLINE, and REFERENCE-BODY are self explanatory, LINKS are the notes that are already linked to it."
-  (let* ((current-highest-index (-max (mapcar 'string-to-number (mapcar'org-kasten--reference-to-index (org-kasten--references-in-kasten)))))
-	 (new-reference-id (number-to-string (+ 1 current-highest-index)))
-	 (file-content (org-kasten--mk-default-reference-content new-reference-id headline links reference-body))
-	 (stringified-headline (org-kasten--headline-to-filename-fragment headline)))
-    (find-file (concat (org-kasten--reference-dir) "R" new-reference-id "-" stringified-headline ".org"))
-    (insert file-content)
-    (org-kasten--read-properties)
-    new-reference-id))
 
 (defun org-kasten--add-link-to-file (file target-index)
   "Add a link to TARGET-INDEX in FILE."
@@ -243,19 +160,9 @@ HEADLINE, and REFERENCE-BODY are self explanatory, LINKS are the notes that are 
 Uses `completing-read', use with ivy for best results."
   (interactive)
   (org-kasten--read-properties)
-  (let* ((files (mapcar 'org-kasten--find-file-for-index org-kasten-links))
+  (let* ((files (mapcar 'org-kasten--find-notes-for-index org-kasten-links))
 	 (candidate (completing-read "Links: " files)))
     (find-file (concat org-kasten-home candidate))))
-
-(defun org-kasten-navigate-references ()
-  "Navigate to the bibliographical references of this card."
-  (interactive)
-  (org-kasten--read-properties)
-  (if (org-kasten--current-file-reference-p)
-      (message "Already in a reference, no references to navigate.")
-    (let* ((files (mapcar 'org-kasten--find-reference-for-index org-kasten-references))
-	   (candidate (completing-read "References: " files)))
-      (find-file (concat (org-kasten--reference-dir) candidate)))))
 
 (defun org-kasten-create-note (read-title)
   "Create a new, enumerated note in the Kasten.
@@ -273,11 +180,6 @@ The READ-TITLE is going into the file fragment and the headline of the new note.
 	(new-buffer (buffer-name)))
     (org-kasten--add-link-to-file current-file new-id)
     (switch-to-buffer new-buffer)))
-
-(defun org-kasten-create-reference (title)
-  "Create a new literary note in the reference store with TITLE."
-  (interactive "MTitle: ")
-  (org-kasten--generate-new-reference title '() ""))
 
 (defun org-kasten-open-index ()
   "Open your index and link file."
@@ -305,18 +207,12 @@ The LINK-INDEX is a shorthand for the note to create a link to."
   (org-kasten--read-properties)
   (when (not (org-kasten--file-in-kasten-p (buffer-file-name)))
     (error "Current Buffer not part of the kasten"))
-  (let* ((linked-files (mapcar 'org-kasten--find-file-for-index org-kasten-links))
+  (let* ((linked-files (mapcar 'org-kasten--find-notes-for-index org-kasten-links))
 	 (current-file-index (org-kasten--file-to-index (buffer-file-name)))
 	 (target-file (completing-read "Link to remove: " linked-files)))
     (save-current-buffer
       (org-kasten--remove-link-from-file target-file org-kasten-id)
       (org-kasten--remove-link-from-file (buffer-file-name) (org-kasten--file-to-index target-file)))))
-
-;; TODO: Implement function.
-;; (defun org-kasten-delete-note ()
-;;   "Delete a card and all of its links.
-;; Can be useful, if it's useful too often you might need to reconsider."
-;;   (interactive))
 
 (provide 'org-kasten)
 ;;; org-kasten.el ends here
