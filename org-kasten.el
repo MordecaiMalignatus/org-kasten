@@ -118,6 +118,62 @@ BODY: The body of the note."
 This is especially useful for fixing up `completing-read' filenames."
   (concat org-kasten-home filename))
 
+(defun org-kasten--increment-segment (note-segment)
+  "Increment NOTE-SEGMENT.
+Probably going to be inlined in the future.  Useful for now."
+  (let* ((is-digit (not (= 0 (string-to-number note-segment))))) ; 0 isn't a valid ID part, so we can cheat a bit.
+    (if is-digit
+	(number-to-string (+ 1 (string-to-number note-segment)))
+      (let* ((letter-list (string-to-list note-segment))
+	     (last-letter (car (last letter-list))))
+	(if (= last-letter 122) ; last char is ?z, need to increment second-last.
+	    (let ((is-single-char (= 1 (length letter-list))))
+	      (if is-single-char
+		  "aa"
+		(concat (org-kasten--increment-segment (substring note-segment 0 (+ -1 (length letter-list))))
+			"a")))
+	  (concat (-take (+ -1 (length letter-list)) letter-list)
+		  (list (+ 1 last-letter))))))))
+
+(defun org-kasten--split-id-segments (note-id)
+  "Split a NOTE-ID into its segments."
+  (let* ((chars-remaining (string-to-list note-id))
+	 (is-digit (lambda (char) (and (<= 47 char) (>= 58 char))))
+	 (is-letter (lambda (char) (and (<= 97 char) (>= 122 char))))
+	 (take-digits (lambda (string) (-take-while is-digit string)))
+	 (take-letters (lambda (string) (-take-while is-letter string)))
+	 (results '()))
+    (while chars-remaining
+      (if (funcall is-digit (first chars-remaining))
+	  (push (funcall take-digits chars-remaining) results)
+	(push (funcall take-letters chars-remaining) results))
+      (setq chars-remaining (-drop (length (first results)) chars-remaining)))
+    (reverse (mapcar 'concat results))))
+
+(defun org-kasten--successor-to-note (note-id kasten-contents)
+  "Create a new note ID based on NOTE-ID, in relation to KASTEN-CONTENTS.
+This is a new ID that is a) unique, and b) follows NOTE-ID directly.
+Based on Luhmann's scheme.
+
+This algorithm has been simplified somewhat from the one Luhmann
+used.  Luhmann had two types of child-notes, sequences and
+regular children.  When he started a new child sequence to the
+node `c2', they would be numbered `c2a1', `c2a2', etc, skipping
+the actual direct child of `c2a'.  This version of the algorithm
+omits sequences, instead treating the ID like a tree path.
+
+Maybe a future patch will introduce the ability to turn a direct
+tree descent into a sequence instead."
+  (let* ((segments (org-kasten--split-id-segments note-id))
+	 (next-segment (if (= 0 (string-to-number (car (last segments)))) ; Since a string reads to 0, and 0 isn't a valid segment, we can cheat.
+			   "1"
+			 "a"))
+	 (prospective-next-id (string-join (append test (list el)))))
+    (while (-contains? kasten-contents prospective-next-id)
+      (setq next-segment (org-kasten--increment-segment next-segment))
+      (setq prospective-next-id (string-join (append test (list el)))))
+    prospective-next-id))
+
 (defun org-kasten--generate-new-note (links note-body)
   "Generate a new note.
 Uses the LINKS and the NOTE-BODY as default values for the template."
