@@ -101,18 +101,6 @@ Accepts either string or number `index'"
       file))
    (directory-files org-kasten-home)))
 
-(defun org-kasten--mk-default-note-content (note-id links body)
-  "Take the individual pieces of a new note and stitch together the body.
-NOTE-ID: the number that will identitify the new note.
-LINKS: A list or string of indices that define the links.
-BODY: The body of the note."
-  (let* ((formatted-links      (if (eq '() links) "nil" (string-join links " ")))
-	(strings    (list (concat "#+ID: " note-id)
-			  (concat "#+LINKS: " formatted-links)
-			  "#+STARTUP: showall\n"
-			  body)))
-    (string-join strings "\n")))
-
 (defun org-kasten--note-to-full-path (filename)
   "Convenience function for turning FILENAME into a fully-qualified path.
 This is especially useful for fixing up `completing-read' filenames."
@@ -177,11 +165,10 @@ tree descent into a sequence instead."
 (defun org-kasten--generate-new-note (links note-body)
   "Generate a new note.
 Uses the LINKS and the NOTE-BODY as default values for the template."
-  (let* ((current-highest-index (-max (mapcar 'string-to-number  (mapcar 'org-kasten--file-to-index (org-kasten--notes-in-kasten)))))
-	 (note-id              (number-to-string (+ 1 current-highest-index)))
-	 (file-content         (org-kasten--mk-default-note-content note-id links note-body)))
+  (org-kasten--read-properties)
+  (let* ((note-id              (org-kasten--successor-to-note org-kasten-id (org-kasten--notes-in-kasten))))
     (find-file (concat org-kasten-home note-id ".org"))
-    (insert file-content)
+    (insert   "#+STARTUP: showall\n\n")
     (org-kasten--read-properties)
     note-id))
 
