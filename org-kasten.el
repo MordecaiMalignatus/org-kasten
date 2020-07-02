@@ -1,6 +1,12 @@
-;;; org-kasten --- A Zettelkasten, but in plain text, using emacs as engine underneath.
-;; Package-Requires: ((org-mode)(s)(dash))
+;;; org-kasten.el --- A Zettelkasten, but in plain text, using emacs as engine underneath.
+;;
+;; Copyright: (C) 2020 Mordecai Malignatus
+;; Version: 0.1
+;; Package-Requires: (s dash)
+;; Author: Mordecai Malignatus <mordecai@malignat.us>
+;;
 ;;; Commentary:
+;;
 ;; This is my attempt to make Zettelkaesten not suck in the digital space, so
 ;; I'm piggybacking on org-mode.  Org-mode is 80% there, the chiefly missing
 ;; thing is that it has bad navigation for this purpose.  This is mostly a bunch
@@ -33,6 +39,14 @@ FILEPATH: File in question."
    (file-truename org-kasten-home)
    (file-truename filepath)))
 
+(defun org-kasten--current-note-id ()
+    "Retrieve current note ID from filename."
+  (let ((filename (buffer-file-name)))
+    (if (not (org-kasten--file-in-kasten-p filename))
+        (error "Current file not in org-kasten, or nil")
+      (let ((without-dir (s-chop-prefix (file-truename org-kasten-home) filename)))
+        (s-chop-suffix ".org" without-dir)))))
+
 (defun org-kasten--parse-properties (string)
   "Get list of all regexp match in a STRING.
 All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
@@ -49,10 +63,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 
 (defun org-kasten--read-properties ()
   "Read the org-kasten relevant properties from `current-file'."
-  (let* ((buffer-text (buffer-substring-no-properties (point-min) (point-max)))
-	 (properties (org-kasten--parse-properties buffer-text)))
-    (setq-local org-kasten-id (cdr (assoc "ID" properties)))
-    (setq-local org-kasten-links (split-string (cdr (assoc "LINKS" properties))))))
+  (org-kasten--parse-properties (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun org-kasten--write-properties ()
   "Write the buffer-local variables to the properties header."
@@ -68,10 +79,9 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 
 (defun org-kasten--properties-to-string ()
   "Make a header string that can be inserted on save, with all local variables stringified."
-  (let ((id org-kasten-id)		; Must be present
-	(links (if (eq org-kasten-links '())
-		   "nil"
-		 (string-join org-kasten-links " "))))
+  (let* ((properties (org-kasten--read-properties))
+        (id (cdr (assoc "ID" properties)))
+        (links (cdr (assoc "LINKS" properties))))
     (concat "#+ID: " id "\n"
 	    "#+LINKS: " links "\n")))
 
@@ -97,14 +107,9 @@ Accepts either string or number `index'"
   (-filter
    (lambda (file)
      (s-matches?
-      "^[[:digit:]]+[[:alnum:]-]?+.org$"
+      "^[[:digit:]].org$"
       file))
    (directory-files org-kasten-home)))
-
-(defun org-kasten--note-to-full-path (filename)
-  "Convenience function for turning FILENAME into a fully-qualified path.
-This is especially useful for fixing up `completing-read' filenames."
-  (concat org-kasten-home filename))
 
 (defun org-kasten--increment-segment (note-segment)
   "Increment NOTE-SEGMENT.
@@ -153,23 +158,22 @@ omits sequences, instead treating the ID like a tree path.
 Maybe a future patch will introduce the ability to turn a direct
 tree descent into a sequence instead."
   (let* ((segments (org-kasten--split-id-segments note-id))
-	 (next-segment (if (= 0 (string-to-number (car (last segments)))) ; Since a string reads to 0, and 0 isn't a valid segment, we can cheat.
-			   "1"
-			 "a"))
-	 (prospective-next-id (string-join (append test (list el)))))
+         (everything-but-last (reverse (cdr (reverse segments))))
+         ;; Since alphanumeric reads to 0, and 0 isn't a valid segment, we can cheat.
+	 (next-segment (if (= 0 (string-to-number (car (last segments))))
+                           "1"
+                         "a"))
+	 (prospective-next-id (string-join (append segments (list next-segment)))))
     (while (-contains? kasten-contents prospective-next-id)
       (setq next-segment (org-kasten--increment-segment next-segment))
-      (setq prospective-next-id (string-join (append test (list el)))))
+      (setq prospective-next-id (string-join (append segments (list next-segment)))))
     prospective-next-id))
 
-(defun org-kasten--generate-new-note (links note-body)
-  "Generate a new note.
-Uses the LINKS and the NOTE-BODY as default values for the template."
-  (org-kasten--read-properties)
-  (let* ((note-id              (org-kasten--successor-to-note org-kasten-id (org-kasten--notes-in-kasten))))
+(defun org-kasten--generate-new-note (id)
+  "Generate a successor to ID."
+  (let* ((note-id (org-kasten--successor-to-note id (org-kasten--notes-in-kasten))))
     (find-file (concat org-kasten-home note-id ".org"))
     (insert   "#+STARTUP: showall\n\n")
-    (org-kasten--read-properties)
     note-id))
 
 (defun org-kasten--add-link-to-file (file target-index)
@@ -188,6 +192,19 @@ Uses the LINKS and the NOTE-BODY as default values for the template."
     (setq-local org-kasten-links (-remove-item target-index org-kasten-links))
     (org-kasten--write-properties)))
 
+(defun org-kasten--navigate-upwards ()
+  "Navigate upwards from current buffer.
+Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad17482'."
+  (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
+      (error "Current buffer not part of the kasten"))
+  (let* ((id (string-remove-suffix ".org" (buffer-file-name)))
+         (segments (org-kasten--split-id-segments id))
+         (target-segments (reverse (tail (reverse segments))))
+         (target-filename (concat (string-join target-segments) ".org")))
+    (find-file target-filename)))
+
+(defun org-kasten--navigate-children ())
+
 (defun org-kasten-navigate-links ()
   "Navigate to one of the links from the current card.
 Uses `completing-read', use with ivy for best results."
@@ -197,18 +214,19 @@ Uses `completing-read', use with ivy for best results."
 	 (candidate (completing-read "Links: " files)))
     (find-file (concat org-kasten-home candidate))))
 
+;; TODO: This needs to be based on the current kasten.
 (defun org-kasten-create-note ()
   "Create a new, enumerated note in the Kasten."
   (interactive)
-  (org-kasten--read-properties)
   (org-kasten--generate-new-note '() ""))
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
   (interactive)
-  (org-kasten--read-properties)
   (let ((current-file (buffer-file-name))
-	(new-id (org-kasten--generate-new-note (list org-kasten-id) ""))
+        (properties (org-kasten--read-properties))
+        (id (car (assoc "ID" properties)))
+	(new-id (org-kasten--generate-new-note (list id) ""))
 	(new-buffer (buffer-name)))
     (org-kasten--add-link-to-file current-file new-id)
     (switch-to-buffer new-buffer)))
@@ -216,7 +234,7 @@ Uses `completing-read', use with ivy for best results."
 (defun org-kasten-open-index ()
   "Open your index and link file."
   (interactive)
-  (find-file (concat org-kasten-home "/0-index.org")))
+  (find-file (concat org-kasten-home "/0.org")))
 
 (defun org-kasten-add-link ()
   "Link this card with another one.
