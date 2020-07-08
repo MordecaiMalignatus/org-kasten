@@ -83,13 +83,6 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
     (concat "#+ID: " id "\n"
 	    "#+LINKS: " links "\n")))
 
-(defun org-kasten--find-notes-for-index (index)
-  "Find notes that have INDEX as prefix.
-Accepts either string or number `index'"
-  (let ((string-index (if (numberp index) (number-to-string index) index)))
-    (-filter (lambda (file) (s-starts-with-p (concat string-index "-") file))
-	     (org-kasten--notes-in-kasten))))
-
 (defun org-kasten--file-to-index (filepath)
   "Take a full FILEPATH, and return the index of the file, if it is in the kasten."
   (let ((maybe-dropped (if (s-starts-with? org-kasten-home filepath)
