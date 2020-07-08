@@ -24,12 +24,10 @@ If nil, org-kasten won't do anything.")
   :lighter " org-k"
   :keymap (let ((map (make-sparse-keymap)))
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
-	    (define-key map (kbd "C-# c n") 'org-kasten-create-note)
 	    (define-key map (kbd "C-# c c") 'org-kasten-create-child-note)
-	    (define-key map (kbd "C-# l") 'org-kasten-navigate-links)
-	    (define-key map (kbd "C-# c l") 'org-kasten-add-link)
-	    (define-key map (kbd "C-# d l") 'org-kasten-remove-link)
-	    map))
+            (define-key map (kbd "C-# p") 'org-kasten-navigate-parent)
+	    (define-key map (kbd "C-# n") 'org-kasten-navigate-children)
+            map))
 
 (defun org-kasten--file-in-kasten-p (filepath)
   "Is the file we're looking at in the kasten?
@@ -53,7 +51,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (save-match-data
     (let ((regexp "^#\\+\\(\[a-zA-Z\]+\\): \\(.*\\)")
 	  (pos 0)
-	  matches)
+	  (matches '()))
       (while (string-match regexp string pos)
 	(if (string= (match-string 2 string) "nil")
 	    (push `(,(match-string 1 string) . "") matches)
@@ -192,9 +190,10 @@ tree descent into a sequence instead."
     (setq-local org-kasten-links (-remove-item target-index org-kasten-links))
     (org-kasten--write-properties)))
 
-(defun org-kasten--navigate-upwards ()
+(defun org-kasten-navigate-parent ()
   "Navigate upwards from current buffer.
 Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad17482'."
+  (interactive)
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
   (let* ((id (string-remove-suffix ".org" (buffer-file-name)))
@@ -203,66 +202,34 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
          (target-filename (concat (string-join target-segments) ".org")))
     (find-file target-filename)))
 
-(defun org-kasten--navigate-children ())
-
-(defun org-kasten-navigate-links ()
-  "Navigate to one of the links from the current card.
-Uses `completing-read', use with ivy for best results."
+(defun org-kasten-navigate-children ()
+  "Navigate to children of current note.
+TODO: This also needs to consider the #+LINKS as children."
   (interactive)
-  (org-kasten--read-properties)
-  (let* ((files (mapcar 'org-kasten--find-notes-for-index org-kasten-links))
-	 (candidate (completing-read "Links: " files)))
-    (find-file (concat org-kasten-home candidate))))
+  (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
+      (error "Current buffer not part of the kasten"))
+  (let* ((id (string-remove-suffix ".org" (buffer-file-name)))
+         (notes (org-kasten--notes-in-kasten))
+         (candidates (-filter (lambda (x) (s-starts-with-p id x)) notes))
+         (chosen-file (completing-read "Children: " candidates)))
+    (find-file chosen-file)))
 
-;; TODO: This needs to be based on the current kasten.
-(defun org-kasten-create-note ()
-  "Create a new, enumerated note in the Kasten."
-  (interactive)
-  (org-kasten--generate-new-note '() ""))
+;; TODO: This needs to be implemented.
+(defun org-kasten-create-root-note ()
+  "Generate a new root-level note."
+  (interactive))
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
   (interactive)
-  (let ((current-file (buffer-file-name))
-        (properties (org-kasten--read-properties))
-        (id (car (assoc "ID" properties)))
-	(new-id (org-kasten--generate-new-note (list id) ""))
-	(new-buffer (buffer-name)))
-    (org-kasten--add-link-to-file current-file new-id)
-    (switch-to-buffer new-buffer)))
+  (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
+      (error "Current buffer not part of the kasten"))
+  (org-kasten--generate-new-note (org-kasten--current-note-id)))
 
 (defun org-kasten-open-index ()
   "Open your index and link file."
   (interactive)
   (find-file (concat org-kasten-home "/0.org")))
-
-(defun org-kasten-add-link ()
-  "Link this card with another one.
-The LINK-INDEX is a shorthand for the note to create a link to."
-  (interactive)
-  (org-kasten--read-properties)
-  (when (not (org-kasten--file-in-kasten-p (buffer-file-name)))
-    (error "Current buffer is not part of the kasten"))
-  (let* ((files (org-kasten--notes-in-kasten))
-	 (candidates (-filter (lambda (file) (not (string= file (buffer-name)))) files))
-	 (current-file-index (org-kasten--file-to-index (buffer-file-name)))
-	 (target-file (org-kasten--note-to-full-path (completing-read "File to link to: " candidates))))
-    (save-current-buffer
-      (org-kasten--add-link-to-file target-file org-kasten-id)
-      (org-kasten--add-link-to-file (buffer-file-name) (org-kasten--file-to-index target-file)))))
-
-(defun org-kasten-remove-link ()
-  "Remove an existing link between this card and another."
-  (interactive)
-  (org-kasten--read-properties)
-  (when (not (org-kasten--file-in-kasten-p (buffer-file-name)))
-    (error "Current Buffer not part of the kasten"))
-  (let* ((linked-files (mapcar 'org-kasten--find-notes-for-index org-kasten-links))
-	 (current-file-index (org-kasten--file-to-index (buffer-file-name)))
-	 (target-file (completing-read "Link to remove: " linked-files)))
-    (save-current-buffer
-      (org-kasten--remove-link-from-file target-file org-kasten-id)
-      (org-kasten--remove-link-from-file (buffer-file-name) (org-kasten--file-to-index target-file)))))
 
 (provide 'org-kasten)
 ;;; org-kasten.el ends here
