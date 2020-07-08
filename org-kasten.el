@@ -78,10 +78,8 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 (defun org-kasten--properties-to-string ()
   "Make a header string that can be inserted on save, with all local variables stringified."
   (let* ((properties (org-kasten--read-properties))
-        (id (cdr (assoc "ID" properties)))
         (links (cdr (assoc "LINKS" properties))))
-    (concat "#+ID: " id "\n"
-	    "#+LINKS: " links "\n")))
+    (concat "#+LINKS: " links "\n")))
 
 (defun org-kasten--file-to-index (filepath)
   "Take a full FILEPATH, and return the index of the file, if it is in the kasten."
