@@ -96,7 +96,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (-filter
    (lambda (file)
      (s-matches?
-      "^[[:digit:]].org$"
+      "^[[:alnum:]].org$"
       file))
    (directory-files org-kasten-home)))
 
