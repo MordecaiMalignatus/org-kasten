@@ -81,16 +81,6 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
         (links (cdr (assoc "LINKS" properties))))
     (concat "#+LINKS: " links "\n")))
 
-(defun org-kasten--file-to-index (filepath)
-  "Take a full FILEPATH, and return the index of the file, if it is in the kasten."
-  (let ((maybe-dropped (if (s-starts-with? org-kasten-home filepath)
-			   (substring filepath (length org-kasten-home) (length filepath))
-			 filepath)))
-    ;;  TODO: Temporary double-check while migration to dropping titles is in progress.
-    (if (s-contains-p "-" maybe-dropped)
-	(substring maybe-dropped 0 (s-index-of "-" maybe-dropped))
-      (substring maybe-dropped 0 (s-index-of "." maybe-dropped)))))
-
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
   (-filter
@@ -208,7 +198,7 @@ TODO: This also needs to consider the #+LINKS as children."
 ;; TODO: This needs to be implemented.
 (defun org-kasten-create-root-note ()
   "Generate a new root-level note."
-  (interactive))
+ (interactive))
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
