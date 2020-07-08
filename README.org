@@ -1,24 +1,21 @@
 * Org-Kasten
 
-After reading Söhnke Ahrendt's /How To Take Smart Notes/ and going through a few
-iterations of the paper-bound index card version I felt limited by the lack of
-portability as soon as you had accumulated some cards. =org-mode= was alread 80%
-there for the functionality I needed, so I hacked some features on top.
+This is a small set of elisp functions I use to implement my own version of a
+Zettelkasten, something that HN is currently infatuated with.
 
-This is my attempt at making a functional /Exocortex/, or a structure to think
-in that is outside of your fleshy containment cell.
+** Structure
+The org-kasten operates on a folder, with a "special" file named =0.org=. This
+acts as the entry point and is hotkeyed to =C-# C-#=.
 
-Any such structure has to be oriented towards a specific goal, as sadly these
-structures do not have the universality of our brains. This one in specific is
-created towards writing and being able to quickly ingest lots of information,
-with later being able to link it.
 
-My personal experience has shown that no topics are too far apart that they will
-not, over quite some connections and angles, relate to each other, meaning I am
-in favour of concentrating as many knowledge nodes as you can create in one
-single cortex.
+** Installation
+1. Place somewhere on your Emacs loadpath. I symlink the repo to
+   =~/.emacs.d/init/org-kasten.el=.
+2. Add to your =init.el=:
 
-This demands scalable tools, as, over time, your knowledge expands to domains
-and topics you may not have even known exist. This needs to be accomodated. As
-such I'm basing this on the most stable piece of software I know, Emacs, as well
-as the most stable serialization format that I know, plain text.
+#+BEGIN_SRC lisp
+(use-package org-kasten
+  :config
+  (setq org-kasten-home "/path/to/kasten/")
+  (add-hook 'org-mode-hook 'org-kasten-mode))
+#+END_SRC
