@@ -64,7 +64,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (org-kasten--parse-properties (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun org-kasten--write-properties ()
-  "Write the buffer-local variables to the properties header."
+  "Write the PROPS to the properties header."
   (let* ((old-position (point))
 	 (removed-header (let* ((buffer (buffer-substring-no-properties (point-min) (point-max)))
 				(lines (split-string buffer "\n"))
@@ -79,7 +79,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   "Make a header string that can be inserted on save, with all local variables stringified."
   (let* ((properties (org-kasten--read-properties))
         (links (cdr (assoc "LINKS" properties))))
-    (concat "#+LINKS: " links "\n")))
+    (concat "#+LINKS: " links "\n" "#+STARTUP: showall" "\n\n")))
 
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
@@ -171,6 +171,14 @@ tree descent into a sequence instead."
     (setq-local org-kasten-links (-remove-item target-index org-kasten-links))
     (org-kasten--write-properties)))
 
+(defun org-kasten--read-links ()
+  "Read LINKS for current file, and turn them into find-able paths."
+  (let* ((props (org-kasten--read-properties))
+         (links (cdr (assoc "LINKS" props)))
+         (split-links (s-split " " links)))
+    (mapcar (lambda (x) (concat org-kasten-home x ".org"))
+              split-links)))
+
 (defun org-kasten-navigate-parent ()
   "Navigate upwards from current buffer.
 Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad17482'."
@@ -184,21 +192,23 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
     (find-file target-filename)))
 
 (defun org-kasten-navigate-children ()
-  "Navigate to children of current note.
-TODO: This also needs to consider the #+LINKS as children."
+  "Navigate to children of current note."
   (interactive)
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
-  (let* ((id (string-remove-suffix ".org" (buffer-file-name)))
+  (let* ((links (org-kasten--read-links))
+         (id (string-remove-suffix ".org" (buffer-file-name)))
          (notes (org-kasten--notes-in-kasten))
-         (candidates (-filter (lambda (x) (s-starts-with-p id x)) notes))
-         (chosen-file (completing-read "Children: " candidates)))
+         (children (-filter (lambda (x) (s-starts-with-p id x)) notes))
+         (children-and-links (append children links))
+         (chosen-file (completing-read "Children: " children-and-links)))
     (find-file chosen-file)))
 
 ;; TODO: This needs to be implemented.
 (defun org-kasten-create-root-note ()
-  "Generate a new root-level note."
- (interactive))
+  "Generate a new root-level note.  Works outside of the kasten."
+  (interactive)
+  (error "Unimplemented"))
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
