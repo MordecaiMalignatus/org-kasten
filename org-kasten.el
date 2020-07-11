@@ -19,6 +19,9 @@
   "Your home for the kasten.
 If nil, org-kasten won't do anything.")
 
+(defvar org-kasten-quick-nav t
+  "If enabled, add shortcuts to navigation.")
+
 (define-minor-mode org-kasten-mode
   "A minor mode providing the features of a Zettelkasten. Requires org."
   :lighter " org-k"
@@ -28,6 +31,11 @@ If nil, org-kasten won't do anything.")
             (define-key map (kbd "C-# p") 'org-kasten-navigate-parent)
 	    (define-key map (kbd "C-# n") 'org-kasten-navigate-children)
             map))
+
+(if org-kasten-quick-nav
+    (progn
+      (define-key org-kasten-mode-map (kbd "C-<") 'org-kasten-navigate-parent)
+      (define-key org-kasten-mode-map (kbd "C->") 'org-kasten-navigate-children)))
 
 (defun org-kasten--file-in-kasten-p (filepath)
   "Is the file we're looking at in the kasten?
