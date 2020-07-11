@@ -193,11 +193,14 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (interactive)
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
-  (let* ((id (string-remove-suffix ".org" (buffer-file-name)))
+  (let* ((id (org-kasten--current-note-id))
          (segments (org-kasten--split-id-segments id))
-         (target-segments (reverse (tail (reverse segments))))
+         (target-segments (reverse (cdr (reverse segments))))
          (target-filename (concat (string-join target-segments) ".org")))
-    (find-file target-filename)))
+    ;; In case we're at a top-level node, open the index.
+    (if (= (length segments) 1)
+        (find-file "0.org")
+      (find-file target-filename))))
 
 (defun org-kasten-navigate-children ()
   "Navigate to children of current note."
