@@ -222,11 +222,17 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
         (org-kasten-create-child-note)
       (find-file chosen-file))))
 
-;; TODO: This needs to be implemented.
 (defun org-kasten-create-root-note ()
   "Generate a new root-level note.  Works outside of the kasten."
   (interactive)
-  (error "Unimplemented"))
+  (let* ((top-level-files (-filter (lambda (file) (s-matches? "^[[:digit:]]+.org$" file))
+                                   (directory-files org-kasten-home)))
+         (next-id (let ((tmp-id 1))
+                    (while (-contains-p top-level-files (concat (number-to-string tmp-id) ".org"))
+                      (setq tmp-id (+ tmp-id 1)))
+                    (number-to-string tmp-id))))
+    (find-file (concat org-kasten-home next-id ".org"))))
+
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
