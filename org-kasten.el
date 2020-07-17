@@ -94,7 +94,7 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
   (-filter
    (lambda (file)
      (s-matches?
-      "^[[:alnum:]].org$"
+      "^[[:alnum:]]+.org$"
       file))
    (directory-files org-kasten-home)))
 
@@ -182,10 +182,12 @@ tree descent into a sequence instead."
 (defun org-kasten--read-links ()
   "Read LINKS for current file, and turn them into find-able paths."
   (let* ((props (org-kasten--read-properties))
-         (links (cdr (assoc "LINKS" props)))
-         (split-links (s-split " " links)))
-    (mapcar (lambda (x) (concat org-kasten-home x ".org"))
-              split-links)))
+         (links (cdr (assoc "LINKS" props))))
+    (if (eq links nil)
+        nil
+      (progn
+        (mapcar (lambda (x) (concat org-kasten-home x ".org"))
+                (split-links (s-split " " links)))))))
 
 (defun org-kasten-navigate-parent ()
   "Navigate upwards from current buffer.
@@ -208,12 +210,17 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
   (let* ((links (org-kasten--read-links))
-         (id (string-remove-suffix ".org" (buffer-file-name)))
+         (id (org-kasten--current-note-id))
          (notes (org-kasten--notes-in-kasten))
-         (children (-filter (lambda (x) (s-starts-with-p id x)) notes))
+         (children (-filter (lambda (x) (and (s-starts-with-p id x)
+                                             (not (string= (concat id ".org") x))))
+                            notes))
          (children-and-links (append children links))
+         (children-links-newfile (push "<new child note>" children-and-links))
          (chosen-file (completing-read "Children: " children-and-links)))
-    (find-file chosen-file)))
+    (if (string= chosen-file "<new child note>")
+        (org-kasten-create-child-note)
+      (find-file chosen-file))))
 
 ;; TODO: This needs to be implemented.
 (defun org-kasten-create-root-note ()
