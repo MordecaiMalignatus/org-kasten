@@ -158,7 +158,8 @@ tree descent into a sequence instead."
 
 (defun org-kasten--generate-new-note (id)
   "Generate a successor to ID."
-  (let* ((note-id (org-kasten--successor-to-note id (org-kasten--notes-in-kasten))))
+  (let* ((notes (mapcar (lambda (id) (s-chop-suffix ".org" id)) (org-kasten--notes-in-kasten)))
+         (note-id (org-kasten--successor-to-note id notes)))
     (find-file (concat org-kasten-home note-id ".org"))
     (insert   "#+STARTUP: showall\n\n")
     note-id))
