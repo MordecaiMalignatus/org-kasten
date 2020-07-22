@@ -27,7 +27,7 @@ If nil, org-kasten won't do anything.")
   :lighter " org-k"
   :keymap (let ((map (make-sparse-keymap)))
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
-	    (define-key map (kbd "C-# c c") 'org-kasten-create-child-note)
+	    (define-key map (kbd "C-# c") 'org-kasten-create-child-note)
             (define-key map (kbd "C-# p") 'org-kasten-navigate-parent)
 	    (define-key map (kbd "C-# n") 'org-kasten-navigate-children)
             map))
