@@ -37,6 +37,11 @@ If nil, org-kasten won't do anything.")
       (define-key org-kasten-mode-map (kbd "C-<") 'org-kasten-navigate-parent)
       (define-key org-kasten-mode-map (kbd "C->") 'org-kasten-navigate-children)))
 
+(defun org-kasten--file->id (id)
+  "Trim the filepath off of an ID, leaving only the alphanumeric identifier.
+This function is pure and idempotent."
+  (s-chop-suffix ".org" (s-chop-prefix org-kasten-home id)))
+
 (defun org-kasten--file-in-kasten-p (filepath)
   "Is the file we're looking at in the kasten?
 This is needed for figuring out how to deal with links.
@@ -45,8 +50,22 @@ FILEPATH: File in question."
    (file-truename org-kasten-home)
    (file-truename filepath)))
 
+(defun org-kasten--is-direct-child-p (note1 note2)
+  "Decides if NOTE2 is a direct child of NOTE1.
+This fails if, for example, NOTE2 is too far removed: 1a1b1 from 1a.
+It also fails if NOTE2 is a parent of NOTE2."
+  (declare (pure t) (side-effect-free t))
+  (let* ((n1-segments  (org-kasten--split-id-segments (org-kasten--file->id note1)))
+         (n2-segments  (org-kasten--split-id-segments (org-kasten--file->id note2))))
+    ;; if the parent is 0, any note with single segment is a direct child.
+    (or (and (equal n1-segments '("0"))
+             (= 1 (length n2-segments)))
+        ;; If the two notes share n1 as prefix, and n2 is one segment longer, it's a direct child.
+        (and (equal (-common-prefix n1-segments n2-segments) n1-segments)
+             (= (+ 1  (length n1-segments)) (length n2-segments))))))
+
 (defun org-kasten--current-note-id ()
-    "Retrieve current note ID from filename."
+  "Retrieve current note ID from filename."
   (let ((filename (buffer-file-name)))
     (if (not (org-kasten--file-in-kasten-p filename))
         (error "Current file not in org-kasten, or nil")
@@ -213,9 +232,7 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (let* ((links (org-kasten--read-links))
          (id (org-kasten--current-note-id))
          (notes (org-kasten--notes-in-kasten))
-         (children (-filter (lambda (x) (and (s-starts-with-p id x)
-                                             (not (string= (concat id ".org") x))))
-                            notes))
+         (children (-filter (lambda (x) (org-kasten--is-direct-child-p id x)) notes))
          (children-and-links (append children links))
          (children-links-newfile (push "<new child note>" children-and-links))
          (chosen-file (completing-read "Children: " children-and-links)))
