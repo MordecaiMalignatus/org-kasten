@@ -59,7 +59,8 @@ It also fails if NOTE2 is a parent of NOTE2."
          (n2-segments  (org-kasten--split-id-segments (org-kasten--file->id note2))))
     ;; if the parent is 0, any note with single segment is a direct child.
     (or (and (equal n1-segments '("0"))
-             (= 1 (length n2-segments)))
+             (= 1 (length n2-segments))
+             (not (equal n2-segments '("0"))))
         ;; If the two notes share n1 as prefix, and n2 is one segment longer, it's a direct child.
         (and (equal (-common-prefix n1-segments n2-segments) n1-segments)
              (= (+ 1  (length n1-segments)) (length n2-segments))))))
