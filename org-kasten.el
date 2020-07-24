@@ -38,8 +38,8 @@ If nil, org-kasten won't do anything.")
       (define-key org-kasten-mode-map (kbd "C->") 'org-kasten-navigate-children)))
 
 (defun org-kasten--file->id (id)
-  "Trim the filepath off of an ID, leaving only the alphanumeric identifier.
-This function is pure and idempotent."
+  "Trim the filepath off of an ID, leaving only the alphanumeric identifier."
+  (declare (pure t) (side-effect-free t))
   (s-chop-suffix ".org" (s-chop-prefix org-kasten-home id)))
 
 (defun org-kasten--file-in-kasten-p (filepath)
