@@ -50,6 +50,20 @@ FILEPATH: File in question."
    (file-truename org-kasten-home)
    (file-truename filepath)))
 
+(defun org-kasten--note->preview (note-id)
+  "Turn a NOTE-ID into a preview string."
+  (let* ((note (org-kasten--file->id note-id))
+         (raw-string (with-temp-buffer
+                       (insert note-id " - ")
+                       (insert-file-contents (concat org-kasten-home note ".org") nil 0 250)
+                       (buffer-string)))
+         (bulk-replaced (s-replace-all '(("\n" . " ") ("#+STARTUP: showall\n" . "") ("  " . " ")) raw-string)))
+    (s-replace-regexp "\\#\\+LINKS\\: [[:alnum:]]+\n" "" bulk-replaced)))
+
+(defun org-kasten--preview->note (preview)
+  "Turn a PREVIEW back into a note-id."
+  (concat org-kasten-home (seq-take-while (lambda (char) (not (equal char ? ))) preview) ".org"))
+
 (defun org-kasten--is-direct-child-p (note1 note2)
   "Decides if NOTE2 is a direct child of NOTE1.
 This fails if, for example, NOTE2 is too far removed: 1a1b1 from 1a.
@@ -111,12 +125,9 @@ All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
 
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
-  (-filter
-   (lambda (file)
-     (s-matches?
-      "^[[:alnum:]]+.org$"
-      file))
-   (directory-files org-kasten-home)))
+  (let ((raw-files (-filter (lambda (file) (s-matches? "^[[:alnum:]]+.org$" file))
+                    (directory-files org-kasten-home))))
+    (mapcar #'org-kasten--file->id raw-files)))
 
 (defun org-kasten--increment-segment (note-segment)
   "Increment NOTE-SEGMENT.
@@ -209,9 +220,7 @@ tree descent into a sequence instead."
          (links (cdr (assoc "LINKS" props))))
     (if (eq links nil)
         nil
-      (progn
-        (mapcar (lambda (x) (concat org-kasten-home x ".org"))
-                (split-links (s-split " " links)))))))
+      (s-split " " links))))
 
 (defun org-kasten-navigate-parent ()
   "Navigate upwards from current buffer.
@@ -233,16 +242,16 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (interactive)
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
-  (let* ((links (org-kasten--read-links))
-         (id (org-kasten--current-note-id))
+  (let* ((id (org-kasten--current-note-id))
          (notes (org-kasten--notes-in-kasten))
          (children (-filter (lambda (x) (org-kasten--is-direct-child-p id x)) notes))
-         (children-and-links (append children links))
-         (children-links-newfile (push "<new child note>" children-and-links))
-         (chosen-file (completing-read "Children: " children-and-links)))
+         (children-and-links (append children (org-kasten--read-links)))
+         (previews (mapcar #'org-kasten--note->preview children-and-links))
+         (children-links-newfile (append previews '("<new child note>")))
+         (chosen-file (completing-read "Children: " children-links-newfile)))
     (if (string= chosen-file "<new child note>")
         (org-kasten-create-child-note)
-      (find-file chosen-file))))
+      (find-file (org-kasten--preview->note chosen-file)))))
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
