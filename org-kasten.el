@@ -167,9 +167,12 @@ tree descent into a sequence instead."
   (let* ((segments (org-kasten--split-id-segments note-id))
          (everything-but-last (reverse (cdr (reverse segments))))
          ;; Since alphanumeric reads to 0, and 0 isn't a valid segment, we can cheat.
-	 (next-segment (if (= 0 (string-to-number (car (last segments))))
-                           "1"
-                         "a"))
+	 (next-segment (cond
+                        ((equal segments '("0"))
+                           (setq segments nil) ; Dirty hack to make incrementing from zero work.
+                           "1")
+                        ((= 0 (string-to-number (car (last segments)))) "1")
+                        (t "a")))
 	 (prospective-next-id (string-join (append segments (list next-segment)))))
     (while (-contains? kasten-contents prospective-next-id)
       (setq next-segment (org-kasten--increment-segment next-segment))
@@ -240,18 +243,6 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
     (if (string= chosen-file "<new child note>")
         (org-kasten-create-child-note)
       (find-file chosen-file))))
-
-(defun org-kasten-create-root-note ()
-  "Generate a new root-level note.  Works outside of the kasten."
-  (interactive)
-  (let* ((top-level-files (-filter (lambda (file) (s-matches? "^[[:digit:]]+.org$" file))
-                                   (directory-files org-kasten-home)))
-         (next-id (let ((tmp-id 1))
-                    (while (-contains-p top-level-files (concat (number-to-string tmp-id) ".org"))
-                      (setq tmp-id (+ tmp-id 1)))
-                    (number-to-string tmp-id))))
-    (find-file (concat org-kasten-home next-id ".org"))))
-
 
 (defun org-kasten-create-child-note ()
   "Create a new card that is linked to the current note."
