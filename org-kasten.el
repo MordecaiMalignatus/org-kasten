@@ -90,17 +90,17 @@ It also fails if NOTE2 is a parent of NOTE2."
 (defun org-kasten--parse-properties ()
   "Get list of all regexp match in current file.
 All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
-  (let ((string (buffer-substring-no-properties (point-min) (point-max))))
-    (save-match-data
-      (let ((regexp "^#\\+\\(\[a-zA-Z\]+\\): \\(.*\\)")
-	    (pos 0)
-	    (matches '()))
-        (while (string-match regexp string pos)
-	  (if (string= (match-string 2 string) "nil")
-	      (push `(,(match-string 1 string) . "") matches)
-	    (push `(,(match-string 1 string) . ,(match-string 2 string)) matches))
-	  (setq pos (match-end 0)))
-        matches))))
+  (save-match-data
+    (let ((buffer-string (buffer-substring-no-properties (point-min) (point-max)))
+          (regexp "^#\\+\\(\[a-zA-Z\]+\\): \\(.*\\)")
+	  (pos 0)
+	  (matches '()))
+      (while (string-match regexp buffer-string pos)
+	(if (string= (match-string 2 buffer-string) "nil")
+	    (push `(,(match-string 1 buffer-string) . "") matches)
+	  (push `(,(match-string 1 buffer-string) . ,(match-string 2 buffer-string)) matches))
+	(setq pos (match-end 0)))
+      matches)))
 
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
