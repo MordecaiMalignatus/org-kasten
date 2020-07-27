@@ -87,41 +87,20 @@ It also fails if NOTE2 is a parent of NOTE2."
       (let ((without-dir (s-chop-prefix (file-truename org-kasten-home) filename)))
         (s-chop-suffix ".org" without-dir)))))
 
-(defun org-kasten--parse-properties (string)
-  "Get list of all regexp match in a STRING.
+(defun org-kasten--parse-properties ()
+  "Get list of all regexp match in current file.
 All lines of format `#+KEY: VALUE' will be extracted, to keep with org syntax."
-  (save-match-data
-    (let ((regexp "^#\\+\\(\[a-zA-Z\]+\\): \\(.*\\)")
-	  (pos 0)
-	  (matches '()))
-      (while (string-match regexp string pos)
-	(if (string= (match-string 2 string) "nil")
-	    (push `(,(match-string 1 string) . "") matches)
-	  (push `(,(match-string 1 string) . ,(match-string 2 string)) matches))
-	(setq pos (match-end 0)))
-      matches)))
-
-(defun org-kasten--read-properties ()
-  "Read the org-kasten relevant properties from `current-file'."
-  (org-kasten--parse-properties (buffer-substring-no-properties (point-min) (point-max))))
-
-(defun org-kasten--write-properties ()
-  "Write the PROPS to the properties header."
-  (let* ((old-position (point))
-	 (removed-header (let* ((buffer (buffer-substring-no-properties (point-min) (point-max)))
-				(lines (split-string buffer "\n"))
-				(header-less (-drop 2 lines)))
-			   (string-join header-less "\n")))
-	 (new-body (concat (org-kasten--properties-to-string) removed-header)))
-    (erase-buffer)
-    (insert new-body)
-    (goto-char old-position)))
-
-(defun org-kasten--properties-to-string ()
-  "Make a header string that can be inserted on save, with all local variables stringified."
-  (let* ((properties (org-kasten--read-properties))
-        (links (cdr (assoc "LINKS" properties))))
-    (concat "#+LINKS: " links "\n" "#+STARTUP: showall" "\n\n")))
+  (let ((string (buffer-substring-no-properties (point-min) (point-max))))
+    (save-match-data
+      (let ((regexp "^#\\+\\(\[a-zA-Z\]+\\): \\(.*\\)")
+	    (pos 0)
+	    (matches '()))
+        (while (string-match regexp string pos)
+	  (if (string= (match-string 2 string) "nil")
+	      (push `(,(match-string 1 string) . "") matches)
+	    (push `(,(match-string 1 string) . ,(match-string 2 string)) matches))
+	  (setq pos (match-end 0)))
+        matches))))
 
 (defun org-kasten--notes-in-kasten ()
   "Return a list of all viable notes in the kasten."
@@ -198,25 +177,9 @@ tree descent into a sequence instead."
     (insert   "#+STARTUP: showall\n\n")
     note-id))
 
-(defun org-kasten--add-link-to-file (file target-index)
-  "Add a link to TARGET-INDEX in FILE."
-  (save-excursion
-    (find-file file)
-    (org-kasten--read-properties)
-    (setq-local org-kasten-links (push target-index org-kasten-links))
-    (org-kasten--write-properties)))
-
-(defun org-kasten--remove-link-from-file (file target-index)
-  "Remove TARGET-INDEX from the links in FILE."
-  (save-excursion
-    (find-file file)
-    (org-kasten--read-properties)
-    (setq-local org-kasten-links (-remove-item target-index org-kasten-links))
-    (org-kasten--write-properties)))
-
 (defun org-kasten--read-links ()
   "Read LINKS for current file, and turn them into find-able paths."
-  (let* ((props (org-kasten--read-properties))
+  (let* ((props (org-kasten--parse-properties))
          (links (cdr (assoc "LINKS" props))))
     (if (eq links nil)
         nil
