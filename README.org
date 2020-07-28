@@ -1,3 +1,4 @@
+#+STARTUP: showall
 * Org-Kasten
 
 This is a small set of elisp functions I use to implement my own version of a
@@ -5,8 +6,85 @@ Zettelkasten, something that HN is currently infatuated with.
 
 ** Structure
 The org-kasten operates on a folder, with a "special" file named =0.org=. This
-acts as the entry point and is hotkeyed to =C-# C-#=.
+acts as the entry point and is hotkeyed to =C-# C-#=. This is the root of the
+document tree. From there on, the rest of the Kasten is available.
 
+*** The Root Node
+The root node, =0.org=, is special. It can't have any ancestors, and will be the
+entry point to the rest of your notes. I usually use this as an index, where I
+link (org-mode links, to be clear) to entry points of ideas, subtrees, and
+specific explanations. Everything that needs quick access usually is linked to
+from here.
+
+*** Descending
+From the root node, you can descend by pressing =C->=. This will either navigate
+you to the children of the current node, or give you the option to create a new
+child note.
+
+As you descend, the children follow a specific format. The first level of
+children of your root node, will simply be numbered. =1=, =2=, and so on. You
+can arbitrarily nest children, so eventually your kasten will contain =1a28b2=,
+for example. Each different segment (either numeric or alphabetical) represents
+another level of nesting. The first child to =1.org= would be =1a.org= and its
+first child would be =1a1.org=. There's no limit to either levels of nesting or
+amoun of children, so go nuts.
+
+*** Ascending
+As you descend, pressing =C-<= will take you up one level. A combination of
+ascending and descending is how you will navigate your kasten with reasonable
+speed.
+
+*** Links
+The last piece of the puzzle are links. These break the strict hierarchy, and
+allow you to cross-reference thoughts in different subtrees. Eventually these
+will have a nicer UX, but for right now, you add a line at the top of the note:
+=#+LINKS: 1a=. Different IDs are separated by spaces, and they will all be
+counted towards the children of the current note, allowing you to "descend" to
+the links you describe.
+
+This is irreplacable for linking together thoughts that came from different
+origins.
+
+** Actually Using This.
+My workflow with this works a little bit like this:
+
+1. Read something interesting in a paper/book/Twitter/Lobsters
+2. Associate it with something I've thought of previously, an idea or argument.
+3. Find it in the Kasten by means of the root node index or navigating to it.
+4. Add one or more new child notes to the nodes it relates to, adding links as I
+   find them or they occur to me.
+5. Repeat.
+6. Eventually this condenses into a coherent argument, elaboration, essay, or
+   causal chain that you can write about or use to illuminate other issues. The
+   end product of this chain is writing of some form, usually nonfiction for
+   others to read.
+
+*** A Concrete Example
+
+1. I find [[https://drewdevault.com/2020/07/27/Anti-AGPL-propaganda.html][an article]] by Drew DeVault on lobste.rs, about how the AGPL is
+   unfairly maligned, and read it.
+2. This reminds me of a growing strand of ideas and discussion that I've
+   recently read about, about the growing co-opting of FOSS by commercial
+   interests.
+3. I go to my Kasten, and find my entry to the topic in my index. (in my case,
+   =1a4.org=.)
+4. I navigate to the children, and find the part where licenses are discussed. (=1a4b.org=)
+5. I add a new child (=1a4b1.org=) about how there are certainly commercial
+   interests in keeping the licensing discussion framed in a way favourable to
+   the people co-opting community labour.
+6. As a side effect, I also reviewed the entire discussion chain that I needed to
+   see to add the note, connecting it to the previous thoughts and discussions.
+7. Then I add a link to a note about propaganda (=3a1.org=), as the 'framing of
+   the discussion' part is very much reminiscent of propaganda, and this could
+   yield further parallels in how the discussion was shifted towards being
+   friendly for big tech companies using FOSS labour.
+8. This prods me to see if there are further links in this space.
+9. I lose interest and read something else.
+
+This is basically the loop of the Kasten. What you find most interesting will
+eventually accumulate a lot of notes, and will make writing about it very easy,
+as a plethora of connections, thoughts, ideas, arguments for and against are
+easily available to you. What you do with it afterwards is for you to decide.
 
 ** Installation
 1. Place somewhere on your Emacs loadpath. I symlink the repo to
