@@ -97,3 +97,8 @@ easily available to you. What you do with it afterwards is for you to decide.
   (setq org-kasten-home "/path/to/kasten/")
   (add-hook 'org-mode-hook 'org-kasten-mode))
 #+END_SRC
+
+** License
+
+This code is licensed under the GPLv3, and is not part of regular Emacs. See
+=LICENSE= for more information.
