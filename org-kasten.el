@@ -55,9 +55,9 @@ FILEPATH: File in question."
   (let* ((note (org-kasten--file->id note-id))
          (raw-string (with-temp-buffer
                        (insert note-id " - ")
-                       (insert-file-contents (concat org-kasten-home note ".org") nil 0 250)
+                       (insert-file-contents (concat org-kasten-home note ".org"))
                        (buffer-string)))
-         (bulk-replaced (s-replace-all '(("\n" . "") ("#+STARTUP: showall\n" . "")) raw-string)))
+         (bulk-replaced (s-replace-all '(("\n\n" . " ") ("\n" . " ") ("#+STARTUP: showall\n" . "")) raw-string)))
     (s-replace-regexp "\\#\\+LINKS\\: [[:alnum:]]+\n" "" bulk-replaced)))
 
 (defun org-kasten--preview->note (preview)
