@@ -134,10 +134,10 @@ Probably going to be inlined in the future.  Useful for now."
 	 (take-letters (lambda (string) (-take-while is-letter string)))
 	 (results '()))
     (while chars-remaining
-      (if (funcall is-digit (first chars-remaining))
+      (if (funcall is-digit (car chars-remaining))
 	  (push (funcall take-digits chars-remaining) results)
 	(push (funcall take-letters chars-remaining) results))
-      (setq chars-remaining (-drop (length (first results)) chars-remaining)))
+      (setq chars-remaining (-drop (length (car results)) chars-remaining)))
     (reverse (mapcar 'concat results))))
 
 (defun org-kasten--successor-to-note (note-id kasten-contents)
