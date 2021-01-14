@@ -45,6 +45,39 @@ the links you describe.
 This is irreplacable for linking together thoughts that came from different
 origins.
 
+** Differences To Roam/Foam/Obsidian
+
+This was written because I find the common implementations actively harmful to
+the core idea of a Kasten.
+
+1. The notes need a hierarchy. This provides context to them, context you
+   otherwise would have to re-establish in each node.
+2. Backlink overviews as popularised by Roam are bad because they posit that
+   each link has to be bidirectional. This is not the case.
+3. They tend to encourage large nodes by having poor context facilities. Large
+   nodes reduce traversal of your graph and thus also reduce the effectiveness
+   of it. Large nodes with poor context also result in duplicating information,
+   because you scarcely traverse enough to see the network.
+4. The idea of a kasten is to encourage competing and outright contrary ideas,
+   resources, theories and resources, which is lost when your kasten becomes a
+   bad wiki. A wiki asks you to author a version of "the truth", as each page is
+   its own context, not its position in the graph.
+5. The idea is to have a node per *idea* and to construct theories with
+   subgraphs. This is lost in wikis, as inevitably they start accruing larger
+   pages.
+
+As such, =org-kasten= aims to do the inverse of that:
+
+1. Traversal is made painless and quick, encouraging "one thought per node" and
+   thus keeping nodes small.
+2. Hierarchic notation and navigation provides a sense of place, as
+   often-traversed subtrees feel familiar.
+3. Links are unidirectional as they add the target to the nodes' children, but
+   the target has no notion of this.
+
+It's far from perfect, but it feels closer to a paper kasten than to a wiki, and
+I consider that a success.
+
 ** Actually Using This.
 My workflow with this works a little bit like this:
 
