@@ -25,9 +25,12 @@ If nil, org-kasten won't do anything.")
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-<") 'org-kasten-navigate-parent)
             (define-key map (kbd "C->") 'org-kasten-navigate-children)
-            (define-key map (kbd "C-I") 'org-kasten-copy-file-id)
+            (define-key map (kbd "C-# l") 'org-kasten-copy-file-id)
+            (define-key map (kbd "C-# i l") 'org-kasten-insert-links-line)
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
             map))
+
+
 
 (defun org-kasten--file->id (id)
   "Trim the filepath off of an ID, leaving only the alphanumeric identifier."
@@ -50,7 +53,7 @@ n         (raw-string (with-temp-buffer
                        (insert-file-contents (concat org-kasten-home note ".org"))
                        (buffer-string)))
          (bulk-replaced (s-replace-all '(("\n\n" . " ") ("\n" . " ") ("#+STARTUP: showall\n" . "")) raw-string)))
-    (s-replace-regexp "\\#\\+LINKS: [[:alnum:]]+" "" bulk-replaced)))
+    (s-replace-regexp "\\#\\+LINKS: [[:alnum:] ]+" "" bulk-replaced)))
 
 (defun org-kasten--preview->note (preview)
   "Turn a PREVIEW back into a note-id."
@@ -225,6 +228,15 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (interactive)
   (kill-new (org-kasten--file->id (buffer-file-name)))
   (message "Copied note ID to kill ring."))
+
+(defun org-kasten-insert-links-line ()
+  "Insert a #+LINKS: line at the top of the file.  This function is brittle but relatively effective."
+  (interactive)
+  (goto-char (point-min))
+  (next-line)
+  (insert "#+LINKS: \n")
+  (previous-line)
+  (org-end-of-line))
 
 (provide 'org-kasten)
 ;;; org-kasten.el ends here
