@@ -32,7 +32,7 @@ If nil, org-kasten won't do anything.")
 (defun org-kasten--file->id (id)
   "Trim the filepath off of an ID, leaving only the alphanumeric identifier."
   (declare (pure t) (side-effect-free t))
-  (s-chop-suffix ".org" (s-chop-prefix org-kasten-home id)))
+  (s-chop-suffix ".org" (s-chop-prefix (expand-file-name org-kasten-home) id)))
 
 (defun org-kasten--file-in-kasten-p (filepath)
   "Is the file we're looking at in the kasten?
