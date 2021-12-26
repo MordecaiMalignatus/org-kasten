@@ -23,8 +23,9 @@ If nil, org-kasten won't do anything.")
   "A minor mode providing the features of a Zettelkasten. Requires org."
   :lighter " org-k"
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key org-kasten-mode-map (kbd "C-<") 'org-kasten-navigate-parent)
-            (define-key org-kasten-mode-map (kbd "C->") 'org-kasten-navigate-children)
+            (define-key map (kbd "C-<") 'org-kasten-navigate-parent)
+            (define-key map (kbd "C->") 'org-kasten-navigate-children)
+            (define-key map (kbd "C-I") 'org-kasten-copy-file-id)
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
             map))
 
@@ -44,7 +45,7 @@ FILEPATH: File in question."
 (defun org-kasten--note->preview (note-id)
   "Turn a NOTE-ID into a preview string."
   (let* ((note (org-kasten--file->id note-id))
-         (raw-string (with-temp-buffer
+n         (raw-string (with-temp-buffer
                        (insert note-id " - ")
                        (insert-file-contents (concat org-kasten-home note ".org"))
                        (buffer-string)))
@@ -218,6 +219,12 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   "Open your index and link file."
   (interactive)
   (find-file (concat org-kasten-home "/0.org")))
+
+(defun org-kasten-copy-file-id ()
+  "Copy ID of file to kill ring."
+  (interactive)
+  (kill-new (org-kasten--file->id (buffer-file-name)))
+  (message "Copied note ID to kill ring."))
 
 (provide 'org-kasten)
 ;;; org-kasten.el ends here
