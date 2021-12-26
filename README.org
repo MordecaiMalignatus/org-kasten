@@ -135,3 +135,10 @@ easily available to you. What you do with it afterwards is for you to decide.
 
 This code is licensed under the GPLv3, and is not part of regular Emacs. See
 =LICENSE= for more information.
+
+* Things to do
+- A "writing desk" functionality. That meaning, copying the contents of nodes to
+  a predestined file with a single command, to assemble notes for processing
+  into more edited, continuous text.
+- Create a =org-kasten--copy-id= function that, well, copies the ID to
+  killring.

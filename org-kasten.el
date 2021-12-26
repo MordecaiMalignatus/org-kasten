@@ -58,7 +58,7 @@ FILEPATH: File in question."
                        (insert-file-contents (concat org-kasten-home note ".org"))
                        (buffer-string)))
          (bulk-replaced (s-replace-all '(("\n\n" . " ") ("\n" . " ") ("#+STARTUP: showall\n" . "")) raw-string)))
-    (s-replace-regexp "\\#\\+LINKS\\: [[:alnum:]]+\n" "" bulk-replaced)))
+    (s-replace-regexp "\\#\\+LINKS: [[:alnum:]]+" "" bulk-replaced)))
 
 (defun org-kasten--preview->note (preview)
   "Turn a PREVIEW back into a note-id."
@@ -180,7 +180,7 @@ tree descent into a sequence instead."
 (defun org-kasten--read-links ()
   "Read LINKS for current file, and turn them into find-able paths."
   (let* ((props (org-kasten--parse-properties))
-         (links (cdr (assoc "LINKS" props))))
+         (links (or (cdr (assoc "LINKS" props)) (cdr (assoc "LINK" props)))))
     (if (eq links nil)
         nil
       (s-split " " links))))
