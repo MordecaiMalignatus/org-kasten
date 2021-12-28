@@ -48,12 +48,14 @@ FILEPATH: File in question."
 (defun org-kasten--note->preview (note-id)
   "Turn a NOTE-ID into a preview string."
   (let* ((note (org-kasten--file->id note-id))
-n         (raw-string (with-temp-buffer
-                       (insert note-id " - ")
-                       (insert-file-contents (concat org-kasten-home note ".org"))
-                       (buffer-string)))
-         (bulk-replaced (s-replace-all '(("\n\n" . " ") ("\n" . " ") ("#+STARTUP: showall\n" . "")) raw-string)))
-    (s-replace-regexp "\\#\\+LINKS: [[:alnum:] ]+" "" bulk-replaced)))
+         (buffer-text (with-temp-buffer
+                        (insert-file-contents (concat org-kasten-home note ".org"))
+                        (buffer-string)))
+         (stripped-header (s-replace "#+STARTUP: showall\n" "" buffer-text))
+         (stripped-links (s-replace-regexp "#\\+LINKS: [[:alnum:][:blank:]]+\n" "" stripped-header))
+         (trimmed (s-trim stripped-links))
+         (stripped-newlines (s-replace "\n" " " trimmed)))
+    (concat note-id " - " stripped-newlines)))
 
 (defun org-kasten--preview->note (preview)
   "Turn a PREVIEW back into a note-id."
