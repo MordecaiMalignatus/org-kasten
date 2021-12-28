@@ -209,6 +209,7 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
          (chosen-file (completing-read "Children: " children-links-newfile)))
     (if (string= chosen-file "<new child note>")
         (org-kasten-create-child-note)
+      (xref-push-marker-stack)
       (find-file (org-kasten--preview->note chosen-file)))))
 
 (defun org-kasten-create-child-note ()
