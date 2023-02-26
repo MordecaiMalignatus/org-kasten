@@ -19,18 +19,19 @@
   "Your home for the kasten.
 If nil, org-kasten won't do anything.")
 
-(define-minor-mode org-kasten-mode
-  "A minor mode providing the features of a Zettelkasten. Requires org."
-  :lighter " org-k"
-  :keymap (let ((map (make-sparse-keymap)))
+(defvar org-kasten-mode-map
+  (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-<") 'org-kasten-navigate-parent)
             (define-key map (kbd "C->") 'org-kasten-navigate-children)
-            (define-key map (kbd "C-# l") 'org-kasten-copy-file-id)
-            (define-key map (kbd "C-# i l") 'org-kasten-insert-links-line)
+            (define-key map (kbd "C-# c") 'org-kasten-copy-file-id)
+            (define-key map (kbd "C-# l t") 'org-kasten-link-to-note)
+            (define-key map (kbd "C-# l f") 'org-kasten-link-from-note)
 	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
             map))
 
-
+(define-minor-mode org-kasten-mode
+  "A minor mode providing the features of a Zettelkasten. Requires org."
+  :lighter " org-k")
 
 (defun org-kasten--file->id (id)
   "Trim the filepath off of an ID, leaving only the alphanumeric identifier."
@@ -232,14 +233,54 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (kill-new (org-kasten--file->id (buffer-file-name)))
   (message "Copied note ID to kill ring."))
 
+(defun org-kasten--links-line-present-p ()
+  "Determine whether or not the current file has a `#+LINKS:' line."
+  (save-excursion
+    (goto-char (point-min))
+    (next-line)
+    (s-starts-with-p "#+LINKS: "
+                     (buffer-substring-no-properties
+                      (line-beginning-position)
+                      (line-end-position)))))
+
 (defun org-kasten-insert-links-line ()
   "Insert a #+LINKS: line at the top of the file.  This function is brittle but relatively effective."
   (interactive)
-  (goto-char (point-min))
-  (next-line)
-  (insert "#+LINKS: \n")
-  (previous-line)
-  (org-end-of-line))
+  (when (not (org-kasten--links-line-present-p))
+    (goto-char (point-min))
+    (next-line)
+    (insert "#+LINKS: \n")
+    (previous-line)
+    (org-end-of-line)))
+
+(defun org-kasten-link-to-note ()
+  "Link to another note from this note."
+  (interactive)
+  (let ((origin (buffer-file-name))
+        (destination (save-excursion
+                       (counsel-rg "" org-kasten-home "" "Link To: ")
+                       (org-kasten--file->id (buffer-file-name)))))
+    (find-file origin)
+    (save-excursion
+      (if (not (org-kasten--links-line-present-p))
+          (org-kasten-insert-links-line)
+        (progn (beginning-of-buffer) (next-line) (end-of-line) (insert " ")))
+      (insert destination))))
+
+(defun org-kasten-link-from-note ()
+  "Link to *this* note from another note."
+  (interactive)
+  (let ((destination (buffer-file-name))
+        (destination-id (org-kasten--file->id (buffer-file-name)))
+        (origin (progn
+                  (counsel-rg "" org-kasten-home "" "Link From: ")
+                  (buffer-file-name))))
+    (if (not (org-kasten--links-line-present-p))
+        (org-kasten-insert-links-line)
+      ;; Move to end of LINKS line to insert new link.
+      (progn (beginning-of-buffer) (next-line) (end-of-line) (insert " ")))
+    (insert destination-id)
+    (find-file destination)))
 
 (provide 'org-kasten)
 ;;; org-kasten.el ends here
