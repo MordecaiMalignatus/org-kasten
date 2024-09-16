@@ -21,13 +21,14 @@ If nil, org-kasten won't do anything.")
 
 (defvar org-kasten-mode-map
   (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-<") 'org-kasten-navigate-parent)
-            (define-key map (kbd "C->") 'org-kasten-navigate-children)
-            (define-key map (kbd "C-# c") 'org-kasten-copy-file-id)
-            (define-key map (kbd "C-# l t") 'org-kasten-link-to-note)
-            (define-key map (kbd "C-# l f") 'org-kasten-link-from-note)
-	    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
-            map))
+    (define-key map (kbd "C-<") 'org-kasten-navigate-parent)
+    (define-key map (kbd "C->") 'org-kasten-navigate-children)
+    (define-key map (kbd "C-# c") 'org-kasten-copy-file-id)
+    (define-key map (kbd "C-# l t") 'org-kasten-link-to-note)
+    (define-key map (kbd "C-# l f") 'org-kasten-link-from-note)
+    (define-key map (kbd "C-# s") 'org-kasten-search-for-this-note)
+    (define-key map (kbd "C-# C-#") 'org-kasten-open-index)
+    map))
 
 (define-minor-mode org-kasten-mode
   "A minor mode providing the features of a Zettelkasten. Requires org."
@@ -221,6 +222,14 @@ Upwards here means, 'to parent file', `a1b' finds `a1', `ad17482si' finds `ad174
   (if (not (org-kasten--file-in-kasten-p (buffer-file-name)))
       (error "Current buffer not part of the kasten"))
   (org-kasten--generate-new-note (org-kasten--current-note-id)))
+
+(defun org-kasten-search-for-this-note ()
+  "Search for the note ID of the open file in the kasten.
+This may be interesting for discovering what links to this place
+without introducing an explicit link."
+  (interactive)
+  (let ((note-id (org-kasten--current-note-id)))
+    (counsel-rg note-id org-kasten-home)))
 
 (defun org-kasten-open-index ()
   "Open your index and link file."
